@@ -19,7 +19,7 @@
  * @license   GPL v2 or newer <https://www.gnu.org/licenses/gpl.txt>
  */
 
-namespace AlfBsky;
+namespace AlfIgImport;
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -28,6 +28,9 @@ if ( ! defined( 'WPINC' ) ) {
 
 if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
+
+	$admin = new AlfIgImportAdmin();
+	$admin->init();
 } else {
 	wp_die( esc_html__( 'Please run composer install to use the ALF Instagram Import plugin.', 'antelope-ig-import' ) );
 }
