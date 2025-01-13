@@ -1,0 +1,16 @@
+{
+	"scripts": {
+		"start": "wp-env start",
+		"stop": "wp-env stop",
+		"build": "wp-env build",
+		"cli": "wp-env run cli",
+		"dev": "wp-env start -- --watch",
+		"lint:php": "composer run-script phpcs",
+		"fix:php": "composer run-script phpcbf",
+		"package": "rm -f ../alf-ig-import.zip; zip -r ../alf-ig-import.zip . -x \".git/*\" -x \"node_modules/*\" -x \"composer.lock\" -x \"package.json\" -x \"package-lock.json\" -x \".wp-env.json\" -x \".gitignore\" -x \"phpcs.xml.dist\"",
+		"publish": "rm -rf publish/trunk/* publish/assets/*; rsync -av --exclude='assets' --exclude='.git' --exclude='node_modules' --exclude='composer.lock' --exclude='package.json' --exclude='package-lock.json' --exclude='.wp-env.json' --exclude='.gitignore' --exclude='phpcs.xml.dist' --exclude='publish' ./ publish/trunk/; rsync -av ./assets/ publish/assets/ --exclude='.DS_Store'"
+	},
+	"devDependencies": {
+		"@wordpress/env": "^10.14.0"
+	}
+}

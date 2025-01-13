@@ -1,0 +1,4 @@
+node_modules/
+composer.lock
+publish/
+.DS_Store
