@@ -3,3 +3,4 @@ composer.lock
 publish/
 .DS_Store
 tmp/
+ig-data
