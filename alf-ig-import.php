@@ -29,6 +29,9 @@ if ( ! defined( 'WPINC' ) ) {
 if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
 
+	// Initialize Action Scheduler
+	require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';
+
 	$admin = new AlfIgImportAdmin();
 	$admin->init();
 } else {

@@ -16,11 +16,26 @@ namespace AlfIgImport;
  */
 class AlfIgImportAdmin {
 	/**
+	 * Background importer instance.
+	 *
+	 * @var BackgroundImporter
+	 */
+	private BackgroundImporter $importer;
+
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		$this->importer = new BackgroundImporter();
+	}
+
+	/**
 	 * Initialize the admin functionality.
 	 */
 	public function init() {
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'handle_form_submission' ) );
+		$this->importer->init();
 	}
 
 	/**
@@ -39,28 +54,24 @@ class AlfIgImportAdmin {
 			return;
 		}
 
-		try {
-			$export_path = plugin_dir_path( dirname( __FILE__ ) ) . 'ig-data';
-			$importer = new MediaImporter( $export_path );
-			$importer->import_media();
-			add_settings_error(
-				'antelope_ig_import',
-				'import_success',
-				__( 'Instagram data imported successfully.', 'antelope-ig-import' ),
-				'success'
-			);
-		} catch ( \Exception $e ) {
+		$export_path = plugin_dir_path( dirname( __FILE__ ) ) . 'ig-data';
+
+		if ( ! $this->importer->schedule_import( $export_path ) ) {
 			add_settings_error(
 				'antelope_ig_import',
 				'import_error',
-				sprintf(
-					/* translators: %s: Error message */
-					__( 'Error importing Instagram data: %s', 'antelope-ig-import' ),
-					$e->getMessage()
-				),
+				__( 'An import is already in progress.', 'antelope-ig-import' ),
 				'error'
 			);
+			return;
 		}
+
+		add_settings_error(
+			'antelope_ig_import',
+			'import_scheduled',
+			__( 'Instagram import has been scheduled and will begin shortly.', 'antelope-ig-import' ),
+			'success'
+		);
 	}
 
 	/**
@@ -81,13 +92,49 @@ class AlfIgImportAdmin {
 	 * Render the admin page.
 	 */
 	public function render_admin_page() {
+		$import_status = $this->importer->get_import_status();
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html__( 'Instagram Import', 'antelope-ig-import' ); ?></h1>
-			<form method="post" action="">
-				<?php wp_nonce_field( 'antelope_ig_import_action', 'antelope_ig_import_nonce' ); ?>
-				<?php submit_button( __( 'Import Instagram Data', 'antelope-ig-import' ) ); ?>
-			</form>
+
+			<?php settings_errors( 'antelope_ig_import' ); ?>
+
+			<?php if ( 'processing' === $import_status['status'] ) : ?>
+				<div class="notice notice-info">
+					<p>
+						<?php
+						printf(
+							/* translators: %d: number of files processed */
+							esc_html__( 'Import in progress. Files processed: %d', 'antelope-ig-import' ),
+							esc_html( $import_status['progress'] )
+						);
+						?>
+					</p>
+				</div>
+			<?php elseif ( 'completed' === $import_status['status'] ) : ?>
+				<div class="notice notice-success">
+					<p><?php esc_html_e( 'Import completed successfully.', 'antelope-ig-import' ); ?></p>
+				</div>
+			<?php elseif ( 'failed' === $import_status['status'] ) : ?>
+				<div class="notice notice-error">
+					<p>
+						<?php
+						printf(
+							/* translators: %s: error message */
+							esc_html__( 'Import failed: %s', 'antelope-ig-import' ),
+							esc_html( $import_status['error'] ?? __( 'Unknown error', 'antelope-ig-import' ) )
+						);
+						?>
+					</p>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( ! in_array( $import_status['status'], array( 'processing', 'queued' ), true ) ) : ?>
+				<form method="post" action="">
+					<?php wp_nonce_field( 'antelope_ig_import_action', 'antelope_ig_import_nonce' ); ?>
+					<?php submit_button( __( 'Import Instagram Data', 'antelope-ig-import' ) ); ?>
+				</form>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

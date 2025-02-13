@@ -3,7 +3,8 @@
 	"description": "A WordPress plugin to import content from an Instagram export",
 	"type": "wordpress-plugin",
 	"require": {
-		"php": ">=8.1"
+		"php": ">=8.1",
+		"woocommerce/action-scheduler": "^3.7"
 	},
 	"autoload": {
 		"psr-4": {

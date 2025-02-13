@@ -172,4 +172,29 @@ class MediaImporter {
 
 		return $attachment_id;
 	}
+
+	/**
+	 * Import a chunk of media from a specific posts JSON file.
+	 *
+	 * @param int $file_index Index of the posts file to process.
+	 * @return bool True if there are more files to process, false if complete.
+	 * @throws \Exception When unable to read or parse the JSON file.
+	 */
+	public function import_media_chunk( int $file_index ): bool {
+		$content_dir = $this->export_path . '/your_instagram_activity/content';
+		$posts_files = glob( $content_dir . '/posts*.json' );
+
+		if ( empty( $posts_files ) ) {
+			throw new \Exception( 'No posts JSON files found in content directory' );
+		}
+
+		if ( ! isset( $posts_files[ $file_index ] ) ) {
+			return false; // No more files to process.
+		}
+
+		$this->import_posts_file( $posts_files[ $file_index ] );
+
+		// Return true if there are more files to process.
+		return isset( $posts_files[ $file_index + 1 ] );
+	}
 } 
