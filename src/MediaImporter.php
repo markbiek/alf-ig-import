@@ -19,6 +19,22 @@ class MediaImporter {
 	private const INSTAGRAM_MEDIA_KEY = '_instagram_media_id';
 
 	/**
+	 * Path to the Instagram export directory.
+	 *
+	 * @var string
+	 */
+	private string $export_path;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param string $export_path Path to the Instagram export directory.
+	 */
+	public function __construct( string $export_path ) {
+		$this->export_path = $export_path;
+	}
+
+	/**
 	 * Import media items into WordPress.
 	 *
 	 * @return void

@@ -44,6 +44,13 @@ class BackgroundImporter {
 	private const IMPORT_STATUS_OPTION = 'alf_instagram_import_status';
 
 	/**
+	 * Option name for storing the export path.
+	 *
+	 * @var string
+	 */
+	private const EXPORT_PATH_OPTION = 'alf_instagram_export_path';
+
+	/**
 	 * Initialize the background importer.
 	 */
 	public function init() {
@@ -63,6 +70,9 @@ class BackgroundImporter {
 			error_log( 'Import already in progress' );
 			return false; // Import already in progress
 		}
+
+		// Store the export path
+		update_option( self::EXPORT_PATH_OPTION, $export_path );
 
 		// Get all media items from JSON files
 		$content_dir = $export_path . '/your_instagram_activity/content';
@@ -136,7 +146,8 @@ class BackgroundImporter {
 		try {
 			error_log( sprintf( 'Processing chunk %d of %d', $chunk_number, $total_chunks ) );
 
-			$importer = new MediaImporter( $this->export_path );
+			$export_path = get_option( self::EXPORT_PATH_OPTION );
+			$importer = new MediaImporter( $export_path );
 			$importer->import_media( $media_items );
 
 			$this->update_import_status( array(

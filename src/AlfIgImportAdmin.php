@@ -97,6 +97,10 @@ class AlfIgImportAdmin {
 	 * Reset the import by canceling pending actions and cleaning up canceled ones.
 	 */
 	private function reset_import() {
+		// Delete the import status and export path options.
+		delete_option( self::IMPORT_STATUS_OPTION );
+		delete_option( self::EXPORT_PATH_OPTION );
+
 		// Cancel all pending actions
 		as_unschedule_all_actions( BackgroundImporter::PROCESS_IMPORT_ACTION );
 		
