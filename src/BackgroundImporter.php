@@ -47,7 +47,7 @@ class BackgroundImporter {
 	 * Initialize the background importer.
 	 */
 	public function init() {
-		add_action( self::PROCESS_IMPORT_ACTION, array( $this, 'process_chunk' ), 10, 2 );
+		add_action( self::PROCESS_IMPORT_ACTION, array( $this, 'process_chunk' ), 10, 3 );
 		add_action( self::COMPLETE_IMPORT_ACTION, array( $this, 'complete_import' ) );
 	}
 
@@ -56,28 +56,58 @@ class BackgroundImporter {
 	 *
 	 * @param string $export_path Path to the Instagram export directory.
 	 * @return bool True if scheduled successfully, false otherwise.
+	 * @throws \Exception When unable to read or parse posts JSON files.
 	 */
 	public function schedule_import( string $export_path ): bool {
 		if ( as_next_scheduled_action( self::PROCESS_IMPORT_ACTION ) ) {
-			return false; // Import already in progress.
+			return false; // Import already in progress
 		}
 
-		// Initialize import status.
+		// Get all media items from JSON files
+		$content_dir = $export_path . '/your_instagram_activity/content';
+		$posts_files = glob( $content_dir . '/posts*.json' );
+		if ( empty( $posts_files ) ) {
+			throw new \Exception( 'No posts JSON files found in content directory' );
+		}
+
+		$all_media_items = [];
+		foreach ( $posts_files as $json_path ) {
+			$posts = json_decode( file_get_contents( $json_path ), true );
+			if ( ! is_array( $posts ) ) {
+				throw new \Exception( sprintf( 'Invalid JSON format in %s', basename( $json_path ) ) );
+			}
+
+			foreach ( $posts as $post ) {
+				if ( isset( $post['media'] ) && is_array( $post['media'] ) ) {
+					$all_media_items = array_merge( $all_media_items, $post['media'] );
+				}
+			}
+		}
+
+		// Split into chunks and schedule actions
+		$chunks = array_chunk( $all_media_items, 10 ); // Process 10 items at a time
+		$total_chunks = count( $chunks );
+
+		// Initialize import status
 		$this->update_import_status( array(
 			'status'     => 'queued',
 			'progress'   => 0,
+			'total'      => count( $all_media_items ),
 			'started_at' => time(),
 		) );
 
-		// Schedule the first chunk.
-		as_enqueue_async_action(
-			self::PROCESS_IMPORT_ACTION,
-			array(
-				'export_path' => $export_path,
-				'file_index'  => 0,
-			),
-			'alf-instagram-import'
-		);
+		// Schedule chunks
+		foreach ( $chunks as $index => $chunk ) {
+			as_enqueue_async_action(
+				self::PROCESS_IMPORT_ACTION,
+				array(
+					'media_items'   => $chunk,
+					'chunk_number'  => $index,
+					'total_chunks'  => $total_chunks,
+				),
+				'alf-instagram-import'
+			);
+		}
 
 		return true;
 	}
@@ -85,31 +115,22 @@ class BackgroundImporter {
 	/**
 	 * Process a chunk of the import.
 	 *
-	 * @param string $export_path Path to the Instagram export directory.
-	 * @param int    $file_index Current file index being processed.
+	 * @param array $media_items Array of media items to import.
+	 * @param int   $chunk_number Current chunk number being processed.
+	 * @param int   $total_chunks Total number of chunks.
 	 */
-	public function process_chunk( string $export_path, int $file_index ) {
+	public function process_chunk( array $media_items, int $chunk_number, int $total_chunks ) {
 		try {
-			$importer = new MediaImporter( $export_path );
-			$has_more = $importer->import_media_chunk( $file_index );
+			$importer = new MediaImporter( $this->export_path );
+			$importer->import_media( $media_items );
 
-			if ( $has_more ) {
-				// Schedule next chunk.
-				as_enqueue_async_action(
-					self::PROCESS_IMPORT_ACTION,
-					array(
-						'export_path' => $export_path,
-						'file_index'  => $file_index + 1,
-					),
-					'alf-instagram-import'
-				);
+			$this->update_import_status( array(
+				'status'   => 'processing',
+				'progress' => ( $chunk_number + 1 ) * count( $media_items ),
+			) );
 
-				$this->update_import_status( array(
-					'status'   => 'processing',
-					'progress' => $file_index + 1,
-				) );
-			} else {
-				// Schedule completion action.
+			// If this was the last chunk, schedule completion
+			if ( $chunk_number === $total_chunks - 1 ) {
 				as_enqueue_async_action(
 					self::COMPLETE_IMPORT_ACTION,
 					array(),
