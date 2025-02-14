@@ -79,7 +79,15 @@ class BackgroundImporter {
 
 			foreach ( $posts as $post ) {
 				if ( isset( $post['media'] ) && is_array( $post['media'] ) ) {
-					$all_media_items = array_merge( $all_media_items, $post['media'] );
+					$filtered_media = array_map( function( $media_item ) {
+						return array_intersect_key( $media_item, array_flip( [
+							'uri',
+							'creation_timestamp',
+							'title'
+						] ) );
+					}, $post['media'] );
+					
+					$all_media_items = array_merge( $all_media_items, $filtered_media );
 				}
 			}
 		}
