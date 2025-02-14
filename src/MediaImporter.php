@@ -12,13 +12,6 @@ namespace AlfIgImport;
  */
 class MediaImporter {
 	/**
-	 * Path to the Instagram export directory.
-	 *
-	 * @var string
-	 */
-	private string $export_path;
-
-	/**
 	 * Meta key for storing Instagram media identifier.
 	 *
 	 * @var string
@@ -26,61 +19,14 @@ class MediaImporter {
 	private const INSTAGRAM_MEDIA_KEY = '_instagram_media_id';
 
 	/**
-	 * Constructor.
-	 *
-	 * @param string $export_path Path to the Instagram export directory.
-	 */
-	public function __construct( string $export_path ) {
-		$this->export_path = $export_path;
-	}
-
-	/**
 	 * Import media from all posts_*.json files into WordPress.
 	 *
 	 * @return void
 	 * @throws \Exception When unable to read or parse posts JSON files.
 	 */
-	public function import_media(): void {
-		$content_dir = $this->export_path . '/your_instagram_activity/content';
-		$posts_files = glob( $content_dir . '/posts*.json' );
-
-		if ( empty( $posts_files ) ) {
-			throw new \Exception( 'No posts JSON files found in content directory' );
-		}
-
-		foreach ( $posts_files as $json_path ) {
-			$this->import_posts_file( $json_path );
-		}
-	}
-
-	/**
-	 * Import media from a single posts JSON file.
-	 *
-	 * @param string $json_path Path to the JSON file.
-	 * @return void
-	 * @throws \Exception When unable to read or parse the JSON file.
-	 */
-	private function import_posts_file( string $json_path ): void {
-		$json_content = file_get_contents( $json_path );
-
-		if ( ! $json_content ) {
-			throw new \Exception( sprintf( 'Unable to read %s', basename( $json_path ) ) );
-		}
-
-		$posts = json_decode( $json_content, true );
-
-		if ( ! is_array( $posts ) ) {
-			throw new \Exception( sprintf( 'Invalid JSON format in %s', basename( $json_path ) ) );
-		}
-
-		foreach ( $posts as $post ) {
-			if ( ! isset( $post['media'] ) || ! is_array( $post['media'] ) ) {
-				continue;
-			}
-
-			foreach ( $post['media'] as $media ) {
-				$this->import_media_item( $media );
-			}
+	public function import_media( array $media_items ): void {
+		foreach ( $media_items as $media ) {
+			$this->import_media_item( $media );
 		}
 	}
 
@@ -171,30 +117,5 @@ class MediaImporter {
 		update_post_meta( $attachment_id, self::INSTAGRAM_MEDIA_KEY, $identifier );
 
 		return $attachment_id;
-	}
-
-	/**
-	 * Import a chunk of media from a specific posts JSON file.
-	 *
-	 * @param int $file_index Index of the posts file to process.
-	 * @return bool True if there are more files to process, false if complete.
-	 * @throws \Exception When unable to read or parse the JSON file.
-	 */
-	public function import_media_chunk( int $file_index ): bool {
-		$content_dir = $this->export_path . '/your_instagram_activity/content';
-		$posts_files = glob( $content_dir . '/posts*.json' );
-
-		if ( empty( $posts_files ) ) {
-			throw new \Exception( 'No posts JSON files found in content directory' );
-		}
-
-		if ( ! isset( $posts_files[ $file_index ] ) ) {
-			return false; // No more files to process.
-		}
-
-		$this->import_posts_file( $posts_files[ $file_index ] );
-
-		// Return true if there are more files to process.
-		return isset( $posts_files[ $file_index + 1 ] );
 	}
 } 
