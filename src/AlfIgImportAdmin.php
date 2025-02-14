@@ -43,7 +43,6 @@ class AlfIgImportAdmin {
 	public function init() {
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'handle_form_submission' ) );
-		$this->importer->init();
 	}
 
 	/**

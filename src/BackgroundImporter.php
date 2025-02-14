@@ -17,6 +17,7 @@ use function as_next_scheduled_action;
 use function get_option;
 use function time;
 use function update_option;
+use function as_get_scheduled_actions;
 
 /**
  * Class to handle background importing of Instagram data.
@@ -68,7 +69,7 @@ class BackgroundImporter {
 	public function schedule_import( string $export_path ): bool {
 		if ( as_next_scheduled_action( self::PROCESS_IMPORT_ACTION ) ) {
 			error_log( 'Import already in progress' );
-			return false; // Import already in progress
+			return false;
 		}
 
 		// Store the export path
@@ -119,7 +120,7 @@ class BackgroundImporter {
 
 		// Schedule chunks
 		foreach ( $chunks as $index => $chunk ) {
-			as_enqueue_async_action(
+			$scheduled = as_enqueue_async_action(
 				self::PROCESS_IMPORT_ACTION,
 				array(
 					'media_items'   => $chunk,
@@ -128,9 +129,18 @@ class BackgroundImporter {
 				),
 				'alf-instagram-import'
 			);
+			error_log( sprintf( 'Scheduled chunk %d with action ID: %d', $index, $scheduled ) );
 		}
 
-		error_log( sprintf( 'Scheduled %d chunks', $total_chunks ) );
+		// After scheduling, let's verify the actions exist
+		$pending_actions = as_get_scheduled_actions(
+			array(
+				'hook' => self::PROCESS_IMPORT_ACTION,
+				'status' => \ActionScheduler_Store::STATUS_PENDING
+			),
+			'ids'
+		);
+		error_log( sprintf( 'Total pending actions after scheduling: %d', count( $pending_actions ) ) );
 
 		return true;
 	}
@@ -143,6 +153,7 @@ class BackgroundImporter {
 	 * @param int   $total_chunks Total number of chunks.
 	 */
 	public function process_chunk( array $media_items, int $chunk_number, int $total_chunks ) {
+		error_log( sprintf( 'Starting to process chunk %d of %d', $chunk_number + 1, $total_chunks ) );
 		try {
 			error_log( sprintf( 'Processing chunk %d of %d', $chunk_number, $total_chunks ) );
 

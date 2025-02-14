@@ -31,6 +31,35 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 
 	// Initialize Action Scheduler
 	require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';
+	
+	// Debug Action Scheduler initialization
+	error_log('Action Scheduler Version: ' . \ActionScheduler_Versions::instance()->latest_version());
+
+	// Ensure Action Scheduler's runner is initialized
+	add_action( 'init', function() {
+		if ( ! class_exists( 'ActionScheduler_QueueRunner' ) ) {
+			error_log('ActionScheduler_QueueRunner not found!');
+			return;
+		}
+
+		$runner = \ActionScheduler_QueueRunner::instance();
+		
+		// Let Action Scheduler handle its own queue running
+		add_filter( 'action_scheduler_run_schedule', '__return_false' );
+		
+		// Optionally increase how many actions are processed per batch
+		add_filter( 'action_scheduler_queue_runner_batch_size', function() {
+			return 25; // Process up to 25 actions at a time
+		});
+
+		// Ensure the queue runner is initiated
+		add_action( 'shutdown', array( $runner, 'run' ) );
+
+	}, 0);
+
+	// Initialize the background importer immediately
+	$importer = new BackgroundImporter();
+	$importer->init();
 
 	$admin = new AlfIgImportAdmin();
 	$admin->init();
