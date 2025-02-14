@@ -60,6 +60,7 @@ class BackgroundImporter {
 	 */
 	public function schedule_import( string $export_path ): bool {
 		if ( as_next_scheduled_action( self::PROCESS_IMPORT_ACTION ) ) {
+			error_log( 'Import already in progress' );
 			return false; // Import already in progress
 		}
 
