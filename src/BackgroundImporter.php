@@ -27,7 +27,7 @@ class BackgroundImporter {
 	 *
 	 * @var string
 	 */
-	private const PROCESS_IMPORT_ACTION = 'alf_process_instagram_import';
+	public const PROCESS_IMPORT_ACTION = 'alf_process_instagram_import';
 
 	/**
 	 * Action hook for completing imports.
@@ -189,7 +189,7 @@ class BackgroundImporter {
 	 *
 	 * @param array $data Status data to update.
 	 */
-	private function update_import_status( array $data ) {
+	public function update_import_status( array $data ) {
 		$current_status = $this->get_import_status();
 		update_option( self::IMPORT_STATUS_OPTION, array_merge( $current_status, $data ) );
 	}

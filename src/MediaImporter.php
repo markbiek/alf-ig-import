@@ -19,7 +19,7 @@ class MediaImporter {
 	private const INSTAGRAM_MEDIA_KEY = '_instagram_media_id';
 
 	/**
-	 * Import media from all posts_*.json files into WordPress.
+	 * Import media items into WordPress.
 	 *
 	 * @return void
 	 * @throws \Exception When unable to read or parse posts JSON files.

@@ -11,6 +11,14 @@
 
 namespace AlfIgImport;
 
+use function add_action;
+use function as_enqueue_async_action;
+use function as_next_scheduled_action;
+use function as_unschedule_action;
+use function get_option;
+use function time;
+use function update_option;
+
 /**
  * Class to handle admin functionality.
  */
@@ -42,15 +50,26 @@ class AlfIgImportAdmin {
 	 * Handle the form submission for importing Instagram data.
 	 */
 	public function handle_form_submission() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		// Handle reset action
+		if ( 
+			isset( $_POST['action'] ) && 
+			'reset_import' === $_POST['action'] && 
+			isset( $_POST['reset_import_nonce'] ) && 
+			wp_verify_nonce( $_POST['reset_import_nonce'], 'reset_import_action' )
+		) {
+			$this->reset_import();
+			return;
+		}
+
 		if ( ! isset( $_POST['antelope_ig_import_nonce'] ) ) {
 			return;
 		}
 
 		if ( ! wp_verify_nonce( $_POST['antelope_ig_import_nonce'], 'antelope_ig_import_action' ) ) {
-			return;
-		}
-
-		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
@@ -70,6 +89,42 @@ class AlfIgImportAdmin {
 			'antelope_ig_import',
 			'import_scheduled',
 			__( 'Instagram import has been scheduled and will begin shortly.', 'antelope-ig-import' ),
+			'success'
+		);
+	}
+
+	/**
+	 * Reset the import by canceling pending actions and cleaning up canceled ones.
+	 */
+	private function reset_import() {
+		// Cancel all pending actions
+		as_unschedule_all_actions( BackgroundImporter::PROCESS_IMPORT_ACTION );
+		
+		// Delete all canceled actions
+		$canceled_actions = as_get_scheduled_actions(
+			array(
+				'group' => 'alf-instagram-import',
+				'status' => \ActionScheduler_Store::STATUS_CANCELED,
+				'per_page' => -1
+			),
+			'ids'
+		);
+
+		foreach ( $canceled_actions as $action_id ) {
+			as_unschedule_action( '', array(), 'alf-instagram-import', array( 'action_id' => $action_id ) );
+		}
+
+		// Reset the import status
+		$this->importer->update_import_status( array(
+			'status' => 'none',
+			'progress' => 0,
+			'error' => null
+		) );
+
+		add_settings_error(
+			'antelope_ig_import',
+			'import_reset',
+			__( 'Import has been reset successfully.', 'antelope-ig-import' ),
 			'success'
 		);
 	}
@@ -133,6 +188,19 @@ class AlfIgImportAdmin {
 				<form method="post" action="">
 					<?php wp_nonce_field( 'antelope_ig_import_action', 'antelope_ig_import_nonce' ); ?>
 					<?php submit_button( __( 'Import Instagram Data', 'antelope-ig-import' ) ); ?>
+				</form>
+			<?php endif; ?>
+
+			<?php if ( in_array( $import_status['status'], array( 'processing', 'queued', 'failed' ), true ) ) : ?>
+				<form method="post" action="">
+					<?php wp_nonce_field( 'reset_import_action', 'reset_import_nonce' ); ?>
+					<input type="hidden" name="action" value="reset_import" />
+					<?php submit_button( 
+						__( 'Reset Import', 'antelope-ig-import' ),
+						'secondary',
+						'reset_import',
+						false
+					); ?>
 				</form>
 			<?php endif; ?>
 		</div>
