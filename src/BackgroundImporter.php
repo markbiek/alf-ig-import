@@ -84,6 +84,8 @@ class BackgroundImporter {
 			}
 		}
 
+		error_log( sprintf( 'Preparing process %d media items', count( $all_media_items ) ) );
+
 		// Split into chunks and schedule actions
 		$chunks = array_chunk( $all_media_items, 10 ); // Process 10 items at a time
 		$total_chunks = count( $chunks );
@@ -109,6 +111,8 @@ class BackgroundImporter {
 			);
 		}
 
+		error_log( sprintf( 'Scheduled %d chunks', $total_chunks ) );
+
 		return true;
 	}
 
@@ -121,6 +125,8 @@ class BackgroundImporter {
 	 */
 	public function process_chunk( array $media_items, int $chunk_number, int $total_chunks ) {
 		try {
+			error_log( sprintf( 'Processing chunk %d of %d', $chunk_number, $total_chunks ) );
+
 			$importer = new MediaImporter( $this->export_path );
 			$importer->import_media( $media_items );
 
@@ -131,6 +137,7 @@ class BackgroundImporter {
 
 			// If this was the last chunk, schedule completion
 			if ( $chunk_number === $total_chunks - 1 ) {
+				error_log( 'Scheduling completion' );
 				as_enqueue_async_action(
 					self::COMPLETE_IMPORT_ACTION,
 					array(),
@@ -138,6 +145,7 @@ class BackgroundImporter {
 				);
 			}
 		} catch ( \Exception $e ) {
+			error_log( sprintf( 'Error processing chunk %d: %s', $chunk_number, $e->getMessage() ) );
 			$this->update_import_status( array(
 				'status' => 'failed',
 				'error'  => $e->getMessage(),
