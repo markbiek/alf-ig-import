@@ -41,14 +41,14 @@ class BackgroundImporter {
 	 *
 	 * @var string
 	 */
-	private const IMPORT_STATUS_OPTION = 'alf_instagram_import_status';
+	public const IMPORT_STATUS_OPTION = 'alf_instagram_import_status';
 
 	/**
 	 * Option name for storing the export path.
 	 *
 	 * @var string
 	 */
-	private const EXPORT_PATH_OPTION = 'alf_instagram_export_path';
+	public const EXPORT_PATH_OPTION = 'alf_instagram_export_path';
 
 	/**
 	 * Initialize the background importer.

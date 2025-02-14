@@ -94,28 +94,30 @@ class AlfIgImportAdmin {
 	}
 
 	/**
-	 * Reset the import by canceling pending actions and cleaning up canceled ones.
+	 * Reset the import by canceling pending actions and cleaning up actions.
 	 */
 	private function reset_import() {
-		// Delete the import status and export path options.
-		delete_option( self::IMPORT_STATUS_OPTION );
-		delete_option( self::EXPORT_PATH_OPTION );
+		// Delete the import status and export path options
+		delete_option( BackgroundImporter::IMPORT_STATUS_OPTION );
+		delete_option( BackgroundImporter::EXPORT_PATH_OPTION );
 
 		// Cancel all pending actions
 		as_unschedule_all_actions( BackgroundImporter::PROCESS_IMPORT_ACTION );
 		
-		// Delete all canceled actions
-		$canceled_actions = as_get_scheduled_actions(
-			array(
-				'group' => 'alf-instagram-import',
-				'status' => \ActionScheduler_Store::STATUS_CANCELED,
-				'per_page' => -1
-			),
-			'ids'
-		);
-
-		foreach ( $canceled_actions as $action_id ) {
-			as_unschedule_action( '', array(), 'alf-instagram-import', array( 'action_id' => $action_id ) );
+		// Clean up actions using WP-CLI command
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			\WP_CLI::runcommand( 'action-scheduler clean' );
+		} else {
+			// Fallback for non-CLI environment - clean up canceled actions
+			global $wpdb;
+			$table_name = $wpdb->prefix . 'actionscheduler_actions';
+			
+			// Delete all actions related to our import
+			$wpdb->delete(
+				$table_name,
+				array( 'hook' => BackgroundImporter::PROCESS_IMPORT_ACTION ),
+				array( '%s' )
+			);
 		}
 
 		// Reset the import status
