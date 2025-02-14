@@ -42,7 +42,35 @@ class MediaImporter {
 	 */
 	public function import_media( array $media_items ): void {
 		foreach ( $media_items as $media ) {
-			$this->import_media_item( $media );
+			$attachment_id = $this->import_media_item( $media );
+			
+			if ( $attachment_id ) {
+				// Get or create the Instagram category
+				$category = get_category_by_slug( 'instagram' );
+				if ( ! $category ) {
+					$category_id = wp_create_category( 'Instagram' );
+				} else {
+					$category_id = $category->term_id;
+				}
+
+				// Create the post
+				$post_args = array(
+					'post_title'    => $media['title'],
+					'post_status'   => 'publish',
+					'post_type'     => 'post',
+					'post_date'     => gmdate( 'Y-m-d H:i:s', $media['creation_timestamp'] ),
+					'post_category' => array( $category_id ),
+				);
+
+				$post_id = wp_insert_post( $post_args );
+
+				if ( is_wp_error( $post_id ) ) {
+					error_log( sprintf( 'Failed to create post for media %s: %s', $media['uri'], $post_id->get_error_message() ) );
+				} else {
+					// Set the featured image
+					set_post_thumbnail( $post_id, $attachment_id );
+				}
+			}
 		}
 	}
 
