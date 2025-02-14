@@ -34,6 +34,11 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 
 	$admin = new AlfIgImportAdmin();
 	$admin->init();
+
+	// Register WP-CLI command
+	if ( defined( 'WP_CLI' ) && WP_CLI ) {
+		\WP_CLI::add_command( 'alf-ig-import', new CLI() );
+	}
 } else {
 	wp_die( esc_html__( 'Please run composer install to use the ALF Instagram Import plugin.', 'antelope-ig-import' ) );
 }
