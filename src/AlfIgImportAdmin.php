@@ -97,50 +97,67 @@ class AlfIgImportAdmin {
 	 * Reset the import by canceling pending actions and cleaning up actions.
 	 */
 	private function reset_import() {
-		// Delete the import status and export path options
-		delete_option( BackgroundImporter::IMPORT_STATUS_OPTION );
-		delete_option( BackgroundImporter::EXPORT_PATH_OPTION );
+		Logger::info( 'Resetting import' );
+		try {
+			// Delete the import status and export path options
+			delete_option( BackgroundImporter::IMPORT_STATUS_OPTION );
+			delete_option( BackgroundImporter::EXPORT_PATH_OPTION );
+			Logger::info( 'Import status and export path options deleted' );
 
-		// Cancel all pending actions
-		as_unschedule_all_actions( BackgroundImporter::PROCESS_IMPORT_ACTION );
-		
-		// Clean up actions using WP-CLI command
-		if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			\WP_CLI::runcommand( 'action-scheduler clean' );
-		} else {
-			// Fallback for non-CLI environment - clean up canceled actions
-			global $wpdb;
-			$table_name = $wpdb->prefix . 'actionscheduler_actions';
+			// Cancel all pending actions
+			as_unschedule_all_actions( BackgroundImporter::PROCESS_IMPORT_ACTION );
+			Logger::info( 'All pending actions canceled' );
 			
-			// Delete all actions related to our import
+			// Clean up actions using WP-CLI command
+			if ( defined( 'WP_CLI' ) && WP_CLI ) {
+				\WP_CLI::runcommand( 'action-scheduler clean' );
+				Logger::info( 'Actions cleaned up using WP-CLI' );
+			} else {
+				// Fallback for non-CLI environment - clean up canceled actions
+				global $wpdb;
+				$table_name = $wpdb->prefix . 'actionscheduler_actions';
+				
+				// Delete all actions related to our import
+				$wpdb->delete(
+					$table_name,
+					array( 'hook' => BackgroundImporter::PROCESS_IMPORT_ACTION ),
+					array( '%s' )
+				);
+				Logger::info( 'Actions cleaned up using fallback method' );
+			}
+
+			// Delete all Instagram media post meta entries
+			global $wpdb;
 			$wpdb->delete(
-				$table_name,
-				array( 'hook' => BackgroundImporter::PROCESS_IMPORT_ACTION ),
-				array( '%s' )
+				$wpdb->postmeta,
+				array('meta_key' => MediaImporter::INSTAGRAM_MEDIA_KEY),
+				array('%s')
+			);
+			Logger::info( 'Instagram media post meta entries deleted' );
+
+			// Reset the import status
+			$this->importer->update_import_status( array(
+				'status' => 'none',
+				'progress' => 0,
+				'error' => null
+			) );
+			Logger::info( 'Import status reset to none' );
+
+			add_settings_error(
+				'antelope_ig_import',
+				'import_reset',
+					__( 'Import has been reset successfully.', 'antelope-ig-import' ),
+					'success'
+				);
+		} catch ( Exception $e ) {
+			Logger::error( 'Error resetting import: %s', $e->getMessage() );
+			add_settings_error(
+				'antelope_ig_import',
+				'import_reset_error',
+				__( 'Error resetting import: %s', 'antelope-ig-import' ),
+				'error'
 			);
 		}
-
-		// Delete all Instagram media post meta entries
-		global $wpdb;
-		$wpdb->delete(
-			$wpdb->postmeta,
-			array('meta_key' => MediaImporter::INSTAGRAM_MEDIA_KEY),
-			array('%s')
-		);
-
-		// Reset the import status
-		$this->importer->update_import_status( array(
-			'status' => 'none',
-			'progress' => 0,
-			'error' => null
-		) );
-
-		add_settings_error(
-			'antelope_ig_import',
-			'import_reset',
-			__( 'Import has been reset successfully.', 'antelope-ig-import' ),
-			'success'
-		);
 	}
 
 	/**
@@ -205,18 +222,16 @@ class AlfIgImportAdmin {
 				</form>
 			<?php endif; ?>
 
-			<?php if ( in_array( $import_status['status'], array( 'processing', 'queued', 'failed' ), true ) ) : ?>
-				<form method="post" action="">
-					<?php wp_nonce_field( 'reset_import_action', 'reset_import_nonce' ); ?>
-					<input type="hidden" name="action" value="reset_import" />
-					<?php submit_button( 
-						__( 'Reset Import', 'antelope-ig-import' ),
-						'secondary',
-						'reset_import',
-						false
-					); ?>
-				</form>
-			<?php endif; ?>
+			<form method="post" action="">
+				<?php wp_nonce_field( 'reset_import_action', 'reset_import_nonce' ); ?>
+				<input type="hidden" name="action" value="reset_import" />
+				<?php submit_button( 
+					__( 'Reset Import', 'antelope-ig-import' ),
+					'secondary',
+					'reset_import',
+					false
+				); ?>
+			</form>
 		</div>
 		<?php
 	}
