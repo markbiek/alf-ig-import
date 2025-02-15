@@ -32,9 +32,6 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	// Initialize Action Scheduler
 	require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';
 	
-	// Debug Action Scheduler initialization
-	error_log('Action Scheduler Version: ' . \ActionScheduler_Versions::instance()->latest_version());
-
 	// Ensure Action Scheduler's runner is initialized
 	add_action( 'init', function() {
 		if ( ! class_exists( 'ActionScheduler_QueueRunner' ) ) {

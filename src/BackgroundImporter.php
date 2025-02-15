@@ -104,7 +104,7 @@ class BackgroundImporter {
 			}
 		}
 
-		error_log( sprintf( 'Preparing process %d media items', count( $all_media_items ) ) );
+		error_log( sprintf( 'Preparing to process %d media items', count( $all_media_items ) ) );
 
 		// Split into chunks and schedule actions
 		$chunks = array_chunk( $all_media_items, 10 ); // Process 10 items at a time
@@ -153,9 +153,8 @@ class BackgroundImporter {
 	 * @param int   $total_chunks Total number of chunks.
 	 */
 	public function process_chunk( array $media_items, int $chunk_number, int $total_chunks ) {
-		error_log( sprintf( 'Starting to process chunk %d of %d', $chunk_number + 1, $total_chunks ) );
 		try {
-			error_log( sprintf( 'Processing chunk %d of %d', $chunk_number, $total_chunks ) );
+			error_log( sprintf( 'Processing chunk %d of %d with %d media items', $chunk_number, $total_chunks, count( $media_items ) ) );
 
 			$export_path = get_option( self::EXPORT_PATH_OPTION );
 			$importer = new MediaImporter( $export_path );

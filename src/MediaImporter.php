@@ -46,6 +46,7 @@ class MediaImporter {
 	 * @return void
 	 */
 	public function import_media( array $media_items ): void {
+		error_log( 'Importing media items: ' . count( $media_items ) );
 		foreach ( $media_items as $media ) {
 			try {
 				$attachment_id = $this->import_media_item( $media );
@@ -67,6 +68,7 @@ class MediaImporter {
 				$clean_title = $sentences[0];
 
 				// Create the post
+				error_log( 'Creating post with for attachment id: ' . $attachment_id );
 				$post_args = array(
 					'post_title'    => $clean_title,
 					'post_status'   => 'publish',
@@ -84,11 +86,17 @@ class MediaImporter {
 					// Set the featured image
 					set_post_thumbnail( $post_id, $attachment_id );
 				}
+
+				error_log( sprintf( 'Imported media item with post id: %s and attachment id: %s', $post_id, $attachment_id ) );
 			} catch ( MediaAlreadyImportedException $e ) {
 				// Already imported - just log and continue
-				error_log( $e->getMessage() );
+				error_log( 'Media already imported: ' . $e->getMessage() );
 				continue;
 			} catch ( MediaImportException $e ) {
+				// Log the error and continue with next item
+				error_log( 'Failed to import media: ' . $e->getMessage() );
+				continue;
+			} catch ( Exception $e ) {
 				// Log the error and continue with next item
 				error_log( sprintf( 'Failed to import media %s: %s', $media['uri'] ?? 'unknown', $e->getMessage() ) );
 				continue;
@@ -140,18 +148,21 @@ class MediaImporter {
 			throw new InvalidMediaDataException( 'Missing required media data fields' );
 		}
 
+		error_log( 'Importing media item with uri: ' . $media['uri'] );
+
 		// Generate unique identifier for this media item
 		$identifier = $this->generate_media_identifier( $media );
 
 		// Skip if already imported
 		if ( $this->is_media_imported( $identifier ) ) {
-			error_log( 'Media already imported: ' . $identifier );
+			error_log( 'Media item already imported: ' . $identifier );
 			throw new MediaAlreadyImportedException( 'Media item already imported: ' . $identifier );
 		}
 
 		$file_path = $this->export_path . '/' . $media['uri'];
 
 		if ( ! file_exists( $file_path ) ) {
+			error_log( 'Media file not found: ' . $file_path );
 			throw new FileNotFoundException( 'Media file not found: ' . $file_path );
 		}
 
@@ -180,12 +191,14 @@ class MediaImporter {
 		$attachment_id = media_handle_sideload( $file, 0, $media['title'], $post_data );
 
 		if ( is_wp_error( $attachment_id ) ) {
+			error_log( 'Failed to import media: ' . $attachment_id->get_error_message() );
 			throw new MediaImportException( 'Failed to import media: ' . $attachment_id->get_error_message() );
 		}
 
 		// Store the Instagram identifier as post meta
 		update_post_meta( $attachment_id, self::INSTAGRAM_MEDIA_KEY, $identifier );
 
+		error_log( 'Imported media item with attachment id: ' . $attachment_id );
 		return $attachment_id;
 	}
 } 
