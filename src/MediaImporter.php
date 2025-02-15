@@ -7,6 +7,11 @@
 
 namespace AlfIgImport;
 
+use AlfIgImport\Exceptions\MediaImportException;
+use AlfIgImport\Exceptions\InvalidMediaDataException;
+use AlfIgImport\Exceptions\FileNotFoundException;
+use AlfIgImport\Exceptions\MediaAlreadyImportedException;
+
 /**
  * Handles importing Instagram media into WordPress.
  */
@@ -37,14 +42,13 @@ class MediaImporter {
 	/**
 	 * Import media items into WordPress.
 	 *
+	 * @param array $media_items Array of media items to import.
 	 * @return void
-	 * @throws \Exception When unable to read or parse posts JSON files.
 	 */
 	public function import_media( array $media_items ): void {
 		foreach ( $media_items as $media ) {
-			$attachment_id = $this->import_media_item( $media );
-			
-			if ( $attachment_id ) {
+			try {
+				$attachment_id = $this->import_media_item( $media );
 				error_log( 'Imported media item: ' . $attachment_id );
 				// Get or create the Instagram category
 				$category = get_category_by_slug( 'instagram' );
@@ -80,6 +84,14 @@ class MediaImporter {
 					// Set the featured image
 					set_post_thumbnail( $post_id, $attachment_id );
 				}
+			} catch ( MediaAlreadyImportedException $e ) {
+				// Already imported - just log and continue
+				error_log( $e->getMessage() );
+				continue;
+			} catch ( MediaImportException $e ) {
+				// Log the error and continue with next item
+				error_log( sprintf( 'Failed to import media %s: %s', $media['uri'] ?? 'unknown', $e->getMessage() ) );
+				continue;
 			}
 		}
 	}
@@ -118,26 +130,29 @@ class MediaImporter {
 	 * Import a single media item into WordPress.
 	 *
 	 * @param array $media Media item data.
-	 * @return int|false The attachment ID on success, false on failure.
+	 * @return int The attachment ID on success.
+	 * @throws MediaImportException When media import fails.
+	 * @throws InvalidMediaDataException When media data is invalid.
+	 * @throws FileNotFoundException When media file is not found.
 	 */
-	private function import_media_item( array $media ): int|false {
+	private function import_media_item( array $media ): int {
 		if ( ! isset( $media['uri'], $media['creation_timestamp'], $media['title'] ) ) {
-			return false;
+			throw new InvalidMediaDataException( 'Missing required media data fields' );
 		}
 
-		// Generate unique identifier for this media item.
+		// Generate unique identifier for this media item
 		$identifier = $this->generate_media_identifier( $media );
 
-		// Skip if already imported.
+		// Skip if already imported
 		if ( $this->is_media_imported( $identifier ) ) {
 			error_log( 'Media already imported: ' . $identifier );
-			return false;
+			throw new MediaAlreadyImportedException( 'Media item already imported: ' . $identifier );
 		}
 
 		$file_path = $this->export_path . '/' . $media['uri'];
 
 		if ( ! file_exists( $file_path ) ) {
-			return false;
+			throw new FileNotFoundException( 'Media file not found: ' . $file_path );
 		}
 
 		// Prepare file for upload.
@@ -165,10 +180,10 @@ class MediaImporter {
 		$attachment_id = media_handle_sideload( $file, 0, $media['title'], $post_data );
 
 		if ( is_wp_error( $attachment_id ) ) {
-			return false;
+			throw new MediaImportException( 'Failed to import media: ' . $attachment_id->get_error_message() );
 		}
 
-		// Store the Instagram identifier as post meta.
+		// Store the Instagram identifier as post meta
 		update_post_meta( $attachment_id, self::INSTAGRAM_MEDIA_KEY, $identifier );
 
 		return $attachment_id;
