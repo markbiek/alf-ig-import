@@ -65,6 +65,11 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		\WP_CLI::add_command( 'alf-ig-import', new CLI() );
 	}
+
+	// Add after autoloader is loaded
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		Logger::enable_debug();
+	}
 } else {
 	wp_die( esc_html__( 'Please run composer install to use the ALF Instagram Import plugin.', 'antelope-ig-import' ) );
 }

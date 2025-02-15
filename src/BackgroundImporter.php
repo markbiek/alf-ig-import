@@ -18,6 +18,7 @@ use function get_option;
 use function time;
 use function update_option;
 use function as_get_scheduled_actions;
+use AlfIgImport\Logger;
 
 /**
  * Class to handle background importing of Instagram data.
@@ -68,7 +69,7 @@ class BackgroundImporter {
 	 */
 	public function schedule_import( string $export_path ): bool {
 		if ( as_next_scheduled_action( self::PROCESS_IMPORT_ACTION ) ) {
-			error_log( 'Import already in progress' );
+			Logger::warning( 'Import already in progress' );
 			return false;
 		}
 
@@ -104,7 +105,7 @@ class BackgroundImporter {
 			}
 		}
 
-		error_log( sprintf( 'Preparing to process %d media items', count( $all_media_items ) ) );
+		Logger::info( 'Preparing to process %d media items', count( $all_media_items ) );
 
 		// Split into chunks and schedule actions
 		$chunks = array_chunk( $all_media_items, 10 ); // Process 10 items at a time
@@ -129,7 +130,7 @@ class BackgroundImporter {
 				),
 				'alf-instagram-import'
 			);
-			error_log( sprintf( 'Scheduled chunk %d with action ID: %d', $index, $scheduled ) );
+			Logger::debug( 'Scheduled chunk %d with action ID: %d', $index, $scheduled );
 		}
 
 		// After scheduling, let's verify the actions exist
@@ -140,7 +141,7 @@ class BackgroundImporter {
 			),
 			'ids'
 		);
-		error_log( sprintf( 'Total pending actions after scheduling: %d', count( $pending_actions ) ) );
+		Logger::info( 'Total pending actions after scheduling: %d', count( $pending_actions ) );
 
 		return true;
 	}
@@ -154,7 +155,7 @@ class BackgroundImporter {
 	 */
 	public function process_chunk( array $media_items, int $chunk_number, int $total_chunks ) {
 		try {
-			error_log( sprintf( 'Processing chunk %d of %d with %d media items', $chunk_number, $total_chunks, count( $media_items ) ) );
+			Logger::debug( 'Processing chunk %d of %d with %d media items', $chunk_number, $total_chunks, count( $media_items ) );
 
 			$export_path = get_option( self::EXPORT_PATH_OPTION );
 			$importer = new MediaImporter( $export_path );
@@ -167,7 +168,7 @@ class BackgroundImporter {
 
 			// If this was the last chunk, schedule completion
 			if ( $chunk_number === $total_chunks - 1 ) {
-				error_log( 'Scheduling completion' );
+				Logger::info( 'Scheduling completion' );
 				as_enqueue_async_action(
 					self::COMPLETE_IMPORT_ACTION,
 					array(),
@@ -175,7 +176,7 @@ class BackgroundImporter {
 				);
 			}
 		} catch ( \Exception $e ) {
-			error_log( sprintf( 'Error processing chunk %d: %s', $chunk_number, $e->getMessage() ) );
+			Logger::error( 'Error processing chunk %d: %s', $chunk_number, $e->getMessage() );
 			$this->update_import_status( array(
 				'status' => 'failed',
 				'error'  => $e->getMessage(),
