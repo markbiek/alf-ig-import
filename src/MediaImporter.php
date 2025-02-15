@@ -53,13 +53,22 @@ class MediaImporter {
 					$category_id = $category->term_id;
 				}
 
+				// Clean up the title
+				$clean_title = preg_replace('/#\w+\s*/', '', $media['title']); // Remove hashtags
+				$clean_title = trim($clean_title); // Remove extra whitespace
+				
+				// Get first sentence if multiple exist
+				$sentences = preg_split('/(?<=[.!?])\s+/', $clean_title, 2);
+				$clean_title = $sentences[0];
+
 				// Create the post
 				$post_args = array(
-					'post_title'    => $media['title'],
+					'post_title'    => $clean_title,
 					'post_status'   => 'publish',
 					'post_type'     => 'post',
 					'post_date'     => gmdate( 'Y-m-d H:i:s', $media['creation_timestamp'] ),
 					'post_category' => array( $category_id ),
+					'post_content'  => $media['title'],
 				);
 
 				$post_id = wp_insert_post( $post_args );
