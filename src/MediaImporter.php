@@ -16,7 +16,7 @@ class MediaImporter {
 	 *
 	 * @var string
 	 */
-	private const INSTAGRAM_MEDIA_KEY = '_instagram_media_id';
+	public const INSTAGRAM_MEDIA_KEY = '_instagram_media_id';
 
 	/**
 	 * Path to the Instagram export directory.
@@ -45,6 +45,7 @@ class MediaImporter {
 			$attachment_id = $this->import_media_item( $media );
 			
 			if ( $attachment_id ) {
+				error_log( 'Imported media item: ' . $attachment_id );
 				// Get or create the Instagram category
 				$category = get_category_by_slug( 'instagram' );
 				if ( ! $category ) {

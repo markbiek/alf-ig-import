@@ -18,6 +18,7 @@ use function as_unschedule_action;
 use function get_option;
 use function time;
 use function update_option;
+use AlfIgImport\MediaImporter;
 
 /**
  * Class to handle admin functionality.
@@ -118,6 +119,14 @@ class AlfIgImportAdmin {
 				array( '%s' )
 			);
 		}
+
+		// Delete all Instagram media post meta entries
+		global $wpdb;
+		$wpdb->delete(
+			$wpdb->postmeta,
+			array('meta_key' => MediaImporter::INSTAGRAM_MEDIA_KEY),
+			array('%s')
+		);
 
 		// Reset the import status
 		$this->importer->update_import_status( array(
