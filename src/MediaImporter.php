@@ -130,6 +130,7 @@ class MediaImporter {
 
 		// Skip if already imported.
 		if ( $this->is_media_imported( $identifier ) ) {
+			error_log( 'Media already imported: ' . $identifier );
 			return false;
 		}
 
