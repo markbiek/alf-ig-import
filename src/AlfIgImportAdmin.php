@@ -32,6 +32,13 @@ class AlfIgImportAdmin {
 	private BackgroundImporter $importer;
 
 	/**
+	 * Selected categories option.
+	 *
+	 * @var string
+	 */
+	private const SELECTED_CATEGORIES_OPTION = 'antelope_ig_import_categories';
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -72,6 +79,21 @@ class AlfIgImportAdmin {
 		if ( ! wp_verify_nonce( $_POST['antelope_ig_import_nonce'], 'antelope_ig_import_action' ) ) {
 			return;
 		}
+
+		// Check if categories were selected
+		if ( ! isset( $_POST['import_categories'] ) || ! is_array( $_POST['import_categories'] ) ) {
+			add_settings_error(
+				'antelope_ig_import',
+				'categories_required',
+				__( 'Please select at least one category.', 'antelope-ig-import' ),
+				'error'
+			);
+			return;
+		}
+
+		// Sanitize and save selected categories
+		$selected_categories = array_map( 'absint', $_POST['import_categories'] );
+		update_option( self::SELECTED_CATEGORIES_OPTION, $selected_categories );
 
 		$export_path = plugin_dir_path( dirname( __FILE__ ) ) . 'ig-data';
 
@@ -179,6 +201,14 @@ class AlfIgImportAdmin {
 	 */
 	public function render_admin_page() {
 		$import_status = $this->importer->get_import_status();
+		$selected_categories = get_option( self::SELECTED_CATEGORIES_OPTION, array() );
+		
+		// Get all categories
+		$categories = get_categories( array(
+			'hide_empty' => false,
+			'orderby' => 'name',
+			'order' => 'ASC'
+		) );
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html__( 'Instagram Import', 'antelope-ig-import' ); ?></h1>
@@ -218,6 +248,26 @@ class AlfIgImportAdmin {
 			<?php if ( ! in_array( $import_status['status'], array( 'processing', 'queued' ), true ) ) : ?>
 				<form method="post" action="">
 					<?php wp_nonce_field( 'antelope_ig_import_action', 'antelope_ig_import_nonce' ); ?>
+					
+					<div class="category-selection">
+						<h3><?php esc_html_e( 'Select Categories', 'antelope-ig-import' ); ?></h3>
+						<p class="description">
+							<?php esc_html_e( 'Choose one or more categories for imported posts.', 'antelope-ig-import' ); ?>
+						</p>
+						
+						<div class="categories-list" style="margin: 20px 0;">
+							<?php foreach ( $categories as $category ) : ?>
+								<label style="display: block; margin-bottom: 10px;">
+									<input type="checkbox" 
+										   name="import_categories[]" 
+										   value="<?php echo esc_attr( $category->term_id ); ?>"
+										   <?php checked( in_array( $category->term_id, $selected_categories, true ) ); ?>>
+									<?php echo esc_html( $category->name ); ?>
+								</label>
+							<?php endforeach; ?>
+						</div>
+					</div>
+
 					<?php submit_button( __( 'Import Instagram Data', 'antelope-ig-import' ) ); ?>
 				</form>
 			<?php endif; ?>

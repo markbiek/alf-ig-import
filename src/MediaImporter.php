@@ -48,17 +48,18 @@ class MediaImporter {
 	 */
 	public function import_media( array $media_items ): void {
 		Logger::info( 'Importing media items: %d', count( $media_items ) );
+
+		// Get selected categories
+		$selected_categories = get_option( 'antelope_ig_import_categories', array() );
+		if ( empty( $selected_categories ) ) {
+			Logger::error( 'No categories selected for import' );
+			throw new MediaImportException( 'No categories selected for import' );
+		}
+
 		foreach ( $media_items as $media ) {
 			try {
 				$attachment_id = $this->import_media_item( $media );
 				Logger::info( 'Imported media item: %d', $attachment_id );
-				// Get or create the Instagram category
-				$category = get_category_by_slug( 'instagram' );
-				if ( ! $category ) {
-					$category_id = wp_create_category( 'Instagram' );
-				} else {
-					$category_id = $category->term_id;
-				}
 
 				// Clean up the title
 				$clean_title = preg_replace('/#\w+\s*/', '', $media['title']); // Remove hashtags
@@ -75,7 +76,7 @@ class MediaImporter {
 					'post_status'   => 'publish',
 					'post_type'     => 'post',
 					'post_date'     => gmdate( 'Y-m-d H:i:s', $media['creation_timestamp'] ),
-					'post_category' => array( $category_id ),
+					'post_category' => $selected_categories,
 					'post_content'  => $media['title'],
 				);
 
