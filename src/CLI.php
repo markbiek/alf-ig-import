@@ -34,6 +34,7 @@ class CLI {
 	 *     $ wp alf-ig-import reset --yes
 	 */
 	public function reset( $args, $assoc_args ) {
+		WP_CLI::error( 'You will need to remove this line in order to use the reset command. NOTE: This will delete ALL posts and media items, NOT just the ones imported by this plugin.' );
 		// First delete all posts
 		$posts = get_posts( array(
 			'post_type'      => 'post',
