@@ -73,6 +73,8 @@ class BackgroundImporter {
 			return false;
 		}
 
+		define( 'WP_IMPORTING', true );
+
 		// Store the export path
 		update_option( self::EXPORT_PATH_OPTION, $export_path );
 
@@ -192,6 +194,8 @@ class BackgroundImporter {
 			'status'       => 'completed',
 			'completed_at' => time(),
 		) );
+
+		define( 'WP_IMPORTING', false );
 	}
 
 	/**

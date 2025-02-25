@@ -134,7 +134,10 @@ class AlfIgImportAdmin {
 				'success'
 			);
 		} catch (\Exception $e) {
-			Logger::error('Failed to extract ZIP file: %s', $e->getMessage());
+			Logger::error('Error during import: %s', $e->getMessage());
+			if ( defined( 'WP_IMPORTING' ) ) {
+				define( 'WP_IMPORTING', false );
+			}
 			add_settings_error(
 				'antelope_ig_import',
 				'extract_error',
