@@ -17,6 +17,8 @@ You could temporarily disable email sending during import by creating a dummy pl
  * Description: When active, WordPress will not send any emails.
  */
 
+The plugin now sets `WP_IMPORTING` to `true` but I haven't tested if it works properly.
+
 add_filter('wp_mail', '__return_false');
 ```
 
